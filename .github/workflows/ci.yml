@@ -128,7 +128,10 @@ jobs:
           pnpm check:docs || { cat /tmp/tossctl-docs-server.log; exit 1; }
 
       - name: Review dependency changes
-        if: github.event_name == 'pull_request'
+        # The fork has no dependency graph data (SBOM API 404s), so this gate
+        # hard-fails on every PR without evaluating anything. Run it only
+        # where it can function (upstream); the fork relies on pnpm audit above.
+        if: github.event_name == 'pull_request' && github.repository == 'JungHoonGhae/tossinvest-cli'
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
