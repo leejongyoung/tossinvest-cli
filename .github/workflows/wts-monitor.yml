@@ -76,6 +76,12 @@ jobs:
           CURRENT_BUILD: ${{ steps.scan.outputs.current_build }}
           PREVIOUS_BUILDS: ${{ steps.scan.outputs.previous_builds }}
           CURRENT_BUILDS: ${{ steps.scan.outputs.current_builds }}
+          ROLLOUT_CHANGED: ${{ steps.scan.outputs.rollout_changed }}
+          ROLLOUT_FEATURES: ${{ steps.scan.outputs.rollout_features }}
+          ANDROID_CANDIDATE: ${{ steps.android.outputs.candidate }}
+          ANDROID_AUDITED: ${{ steps.android.outputs.audited }}
+          ANDROID_STALE: ${{ steps.android.outputs.audit_stale }}
+          ANDROID_SOURCE: ${{ steps.android.outputs.metadata_source }}
         run: |
           SUMMARY=$(head -1 /tmp/wts_summary.txt)
           ADDED=$(jq -r '.added[]? | "• `\(.)`"' /tmp/wts_diff.json | head -20)
@@ -85,8 +91,8 @@ jobs:
           trunc() { head -c 1400; }
           CATALOG_URL="https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/reverse-engineering/wts-endpoints.json"
           WTS_BUILD="**WTS builds**"$'\n'"root: $PREVIOUS_BUILD → $CURRENT_BUILD"$'\n'"active: $PREVIOUS_BUILDS → $CURRENT_BUILDS"
-          ROLLOUT="**롤아웃 기능 계약**"$'\n'"changed=${{ steps.scan.outputs.rollout_changed }} · features=${{ steps.scan.outputs.rollout_features }}"
-          ANDROID="**일반 토스 Android 앱**"$'\n'"candidate ${{ steps.android.outputs.candidate }} · audited ${{ steps.android.outputs.audited }} · stale=${{ steps.android.outputs.audit_stale }} · source=${{ steps.android.outputs.metadata_source }}"
+          ROLLOUT="**롤아웃 기능 계약**"$'\n'"changed=${ROLLOUT_CHANGED} · features=${ROLLOUT_FEATURES}"
+          ANDROID="**일반 토스 Android 앱**"$'\n'"candidate ${ANDROID_CANDIDATE} · audited ${ANDROID_AUDITED} · stale=${ANDROID_STALE} · source=${ANDROID_SOURCE}"
 
           # Components V2 (flags 32768): 웹/API 또는 앱 감사 변동 주황 Container.
           jq -n \
@@ -97,7 +103,7 @@ jobs:
             --arg removed "**삭제/변경**"$'\n'"$(printf '%s' "$REMOVED" | trunc)" \
             --arg foot  "-# Android candidate는 제3자 메타데이터 신호이며 APK 서명·정적 분석 전까지 미감사 상태" \
             --arg catalog "$CATALOG_URL" \
-            '{flags:32768, components:[{
+            '{flags:32768, allowed_mentions:{parse:[]}, components:[{
               type:17, accent_color:15105570, components:[
                 {type:10, content:$title},
                 {type:10, content:$desc},
