@@ -206,7 +206,7 @@ jobs:
             --arg toss "**공식 Open API spec** — 버전·엔드포인트·내용 추적"$'\n'"$(printf '%s' "$TOSS_BLOCK" | trunc)" \
             --arg foot "-# tossctl daily monitor · $NOW_KST KST · 전체 조회 API 헬스는 \`tossctl monitor api\`" \
             --arg issue "${REPO_URL}/issues/31" \
-            '{flags:32768, components:[{
+            '{flags:32768, allowed_mentions:{parse:[]}, components:[{
               type:17, accent_color:$color, components:[
                 {type:10, content:$title},
                 {type:10, content:$intro},
@@ -228,8 +228,8 @@ jobs:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           if [ -z "$WEBHOOK" ]; then
-            echo "::error::DISCORD_WEBHOOK secret 미설정"
-            exit 1
+            echo "::warning::DISCORD_WEBHOOK secret 미설정 — 알림 skip"
+            exit 0
           fi
           # Components V2 는 웹훅이 with_components=true 일 때만 존중한다 (없으면 드롭 → 50006)
           SEP='?'; case "$WEBHOOK" in *\?*) SEP='&';; esac
@@ -238,7 +238,11 @@ jobs:
             --data @/tmp/payload.json "${WEBHOOK}${SEP}with_components=true")
           echo "Discord status: $HTTP"
           cat /tmp/resp || true
-          [ "$HTTP" = "204" ] || exit 1
+          # 알림 실패가 스냅샷 커밋·자동화 PR을 막지 않는다 (wts-monitor와 동일).
+          if [ "$HTTP" != "204" ]; then
+            echo "::warning::Discord delivery failed with status $HTTP."
+            exit 0
+          fi
 
       - name: Commit snapshot (실제 spec 변경 시에만)
         if: hashFiles('docs/migration/.openapi-snapshot.json') != ''
